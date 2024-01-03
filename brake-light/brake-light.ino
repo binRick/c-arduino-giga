@@ -17,41 +17,39 @@
 #define PIN 7
 #define NUMPIXELS 7 
 #define BRAKE_ACCEL 5
+#define DEBUG_SERIAL false
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(7, PIN, NEO_GRB + NEO_KHZ800);
 
 
 void setup() {
+  if(DEBUG_SERIAL){
+
     Serial.begin(115200);
-  while (!Serial) delay(10);     // will pause Zero, Leonardo, etc until serial console opens
+    while (!Serial) delay(10);     // will pause Zero, Leonardo, etc until serial console opens
+    Serial.println("LIS3DH test!");
 
-  Serial.println("LIS3DH test!");
+    if (! lis.begin(0x18)) { 
+      Serial.println("Couldnt start");
+      while (1) yield();
+    }
+    Serial.println("LIS3DH found!");
 
-  if (! lis.begin(0x18)) {   // change this to 0x19 for alternative i2c address
-    Serial.println("Couldnt start");
-    while (1) yield();
-  }
-  Serial.println("LIS3DH found!");
-
-  // lis.setRange(LIS3DH_RANGE_4_G);   // 2, 4, 8 or 16 G!
-
-  Serial.print("Range = "); Serial.print(2 << lis.getRange());
-  Serial.println("G");
-
-  // lis.setDataRate(LIS3DH_DATARATE_50_HZ);
-  Serial.print("Data rate set to: ");
-  switch (lis.getDataRate()) {
-    case LIS3DH_DATARATE_1_HZ: Serial.println("1 Hz"); break;
-    case LIS3DH_DATARATE_10_HZ: Serial.println("10 Hz"); break;
-    case LIS3DH_DATARATE_25_HZ: Serial.println("25 Hz"); break;
-    case LIS3DH_DATARATE_50_HZ: Serial.println("50 Hz"); break;
-    case LIS3DH_DATARATE_100_HZ: Serial.println("100 Hz"); break;
-    case LIS3DH_DATARATE_200_HZ: Serial.println("200 Hz"); break;
-    case LIS3DH_DATARATE_400_HZ: Serial.println("400 Hz"); break;
-
-    case LIS3DH_DATARATE_POWERDOWN: Serial.println("Powered Down"); break;
-    case LIS3DH_DATARATE_LOWPOWER_5KHZ: Serial.println("5 Khz Low Power"); break;
-    case LIS3DH_DATARATE_LOWPOWER_1K6HZ: Serial.println("16 Khz Low Power"); break;
+    Serial.print("Range = "); Serial.print(2 << lis.getRange());
+    Serial.println("G");
+    Serial.print("Data rate set to: ");
+    switch (lis.getDataRate()) {
+      case LIS3DH_DATARATE_1_HZ: Serial.println("1 Hz"); break;
+      case LIS3DH_DATARATE_10_HZ: Serial.println("10 Hz"); break;
+      case LIS3DH_DATARATE_25_HZ: Serial.println("25 Hz"); break;
+      case LIS3DH_DATARATE_50_HZ: Serial.println("50 Hz"); break;
+      case LIS3DH_DATARATE_100_HZ: Serial.println("100 Hz"); break;
+      case LIS3DH_DATARATE_200_HZ: Serial.println("200 Hz"); break;
+      case LIS3DH_DATARATE_400_HZ: Serial.println("400 Hz"); break;
+      case LIS3DH_DATARATE_POWERDOWN: Serial.println("Powered Down"); break;
+      case LIS3DH_DATARATE_LOWPOWER_5KHZ: Serial.println("5 Khz Low Power"); break;
+      case LIS3DH_DATARATE_LOWPOWER_1K6HZ: Serial.println("16 Khz Low Power"); break;
+    }
   }
   // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
   #if defined (__AVR_ATtiny85__)
@@ -65,59 +63,40 @@ void setup() {
 }
 
 void loop() {
-  // Some example procedures showing how to display to the pixels:
-  /*
-  colorWipe(strip.Color(255, 0, 0), 50); // Red
-  colorWipe(strip.Color(0, 255, 0), 50); // Green
-  colorWipe(strip.Color(0, 0, 255), 50); // Blue
-  */
-//colorWipe(strip.Color(0, 0, 0, 255), 50); // White RGBW
-  // Send a theater pixel chase in...
-  //theaterChase(strip.Color(127, 127, 127), 50); // White
-  /*
-  theaterChase(strip.Color(127, 0, 0), 50); // Red
-  theaterChase(strip.Color(0, 0, 127), 50); // Blue
-  */
-  lis.read();      // get X Y and Z data at once
-  // Then print out the raw data
-  Serial.print("X:  "); Serial.print(lis.x);
-  Serial.print("  \tY:  "); Serial.print(lis.y);
-  Serial.print("  \tZ:  "); Serial.print(lis.z);
 
+  lis.read();     
+  if(DEBUG_SERIAL){
+    Serial.print("X:  "); Serial.print(lis.x);
+    Serial.print("  \tY:  "); Serial.print(lis.y);
+    Serial.print("  \tZ:  "); Serial.print(lis.z);
+  }
   /* Or....get a new sensor event, normalized */
   sensors_event_t event;
   lis.getEvent(&event);
+  if(DEBUG_SERIAL){
 
-  /* Display the results (acceleration is measured in m/s^2) */
-  Serial.print("\t\tX: "); Serial.print(event.acceleration.x);
-  Serial.print(" \tY: "); Serial.print(event.acceleration.y);
-  Serial.print(" \tZ: "); Serial.print(event.acceleration.z);
-  Serial.println(" m/s^2 ");
+    Serial.print("\t\tX: "); Serial.print(event.acceleration.x);
+    Serial.print(" \tY: "); Serial.print(event.acceleration.y);
+    Serial.print(" \tZ: "); Serial.print(event.acceleration.z);
+    Serial.println(" m/s^2 ");
 
-  Serial.println();
+    Serial.println();
+  }
 
+  if(event.acceleration.y > BRAKE_ACCEL){
+  //  theaterChase(strip.Color(255, 0, 0), 50);
 
-  if(event.acceleration.y > BRAKE_ACCEL || event.acceleration.x > BRAKE_ACCEL || event.acceleration.z > BRAKE_ACCEL){
-    for(int i=0; i<NUMPIXELS; i++) { // For each pixel...
-
-   
+   // delay(100);
+    for(int i=0; i<NUMPIXELS; i++) {
       strip.setPixelColor(i, strip.Color(255, 0, 0));
-        strip.show(); 
-
-
-        // Send the updated pixel colors to the hardware.
-
-       // Pause before next pass through loop
+      strip.show(); 
     }
-    delay(2000);
+    delay(1000);
   }else{
     for(int i=0; i<NUMPIXELS; i++) { // For each pixel...
-
       strip.setPixelColor(i, strip.Color(0, 0, 0));
-        strip.show(); 
-
+      strip.show(); 
     }
-
   }
   
 

@@ -17,9 +17,12 @@
 #define PIN 7
 #define NUMPIXELS 7 
 #define BRAKE_ACCEL 5
-#define DEBUG_SERIAL false
+#define DEBUG_SERIAL true
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(7, PIN, NEO_GRB + NEO_KHZ800);
+long lastSerialLog = 0;
+long lastAccelTime = 0;
+int qtyBrakeEvents = 0;
 
 
 void setup() {
@@ -28,11 +31,14 @@ void setup() {
     Serial.begin(115200);
     while (!Serial) delay(10);     // will pause Zero, Leonardo, etc until serial console opens
     Serial.println("LIS3DH test!");
-
-    if (! lis.begin(0x18)) { 
-      Serial.println("Couldnt start");
+  }
+  if (! lis.begin(0x18)) {
+      if(DEBUG_SERIAL){ 
+        Serial.println("Couldnt start");
+      }
       while (1) yield();
-    }
+  }
+  if(DEBUG_SERIAL){
     Serial.println("LIS3DH found!");
 
     Serial.print("Range = "); Serial.print(2 << lis.getRange());
@@ -66,27 +72,42 @@ void loop() {
 
   lis.read();     
   if(DEBUG_SERIAL){
-    Serial.print("X:  "); Serial.print(lis.x);
-    Serial.print("  \tY:  "); Serial.print(lis.y);
-    Serial.print("  \tZ:  "); Serial.print(lis.z);
+    //Serial.print("X:  "); Serial.print(lis.x);
+   // Serial.print("  Y:  "); Serial.print(lis.y);
+   // Serial.print("  Z:  "); Serial.print(lis.z);
   }
   /* Or....get a new sensor event, normalized */
   sensors_event_t event;
   lis.getEvent(&event);
   if(DEBUG_SERIAL){
+    if(millis()-lastSerialLog > 100){
 
-    Serial.print("\t\tX: "); Serial.print(event.acceleration.x);
-    Serial.print(" \tY: "); Serial.print(event.acceleration.y);
-    Serial.print(" \tZ: "); Serial.print(event.acceleration.z);
-    Serial.println(" m/s^2 ");
+      Serial.print(" | X: "); Serial.print(event.acceleration.x);
+      Serial.print(" Y: "); Serial.print(event.acceleration.y);
+      Serial.print(" Z: "); Serial.print(event.acceleration.z);
+      Serial.print(" m/s^2 ");
 
-    Serial.println();
+      Serial.println();
+      lastSerialLog = millis();
+
+    }
   }
 
+  bool doBrakeLight = false;
   if(event.acceleration.y > BRAKE_ACCEL){
-  //  theaterChase(strip.Color(255, 0, 0), 50);
+    Serial.print("brake!");
+    Serial.print("qty: "); Serial.print(qtyBrakeEvents);
+    Serial.println();
+    qtyBrakeEvents++;
+  }else{
+    qtyBrakeEvents = 0;
+  }
+  if(qtyBrakeEvents > 5){
+    doBrakeLight = true;
 
-   // delay(100);
+  }
+
+  if(doBrakeLight){
     for(int i=0; i<NUMPIXELS; i++) {
       strip.setPixelColor(i, strip.Color(255, 0, 0));
       strip.show(); 
@@ -98,12 +119,6 @@ void loop() {
       strip.show(); 
     }
   }
-  
-
-  //delay(200);
-  //rainbow(20);
-  //rainbowCycle(20);
-  //theaterChaseRainbow(50);
 }
 
 // Fill the dots one after the other with a color
@@ -113,81 +128,5 @@ void colorWipe(uint32_t c, uint8_t wait) {
     strip.show();
     delay(wait);
   }
-}
-
-void rainbow(uint8_t wait) {
-  uint16_t i, j;
-
-  for(j=0; j<256; j++) {
-    for(i=0; i<strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel((i+j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
-}
-
-// Slightly different, this makes the rainbow equally distributed throughout
-void rainbowCycle(uint8_t wait) {
-  uint16_t i, j;
-
-  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
-    for(i=0; i< strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
-}
-
-//Theatre-style crawling lights.
-void theaterChase(uint32_t c, uint8_t wait) {
-  for (int j=0; j<10; j++) {  //do 10 cycles of chasing
-    for (int q=0; q < 3; q++) {
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, c);    //turn every third pixel on
-      }
-      strip.show();
-
-      delay(wait);
-
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, 0);        //turn every third pixel off
-      }
-    }
-  }
-}
-
-//Theatre-style crawling lights with rainbow effect
-void theaterChaseRainbow(uint8_t wait) {
-  for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
-    for (int q=0; q < 3; q++) {
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, Wheel( (i+j) % 255));    //turn every third pixel on
-      }
-      strip.show();
-
-      delay(wait);
-
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, 0);        //turn every third pixel off
-      }
-    }
-  }
-}
-
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
-  WheelPos = 255 - WheelPos;
-  if(WheelPos < 85) {
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  }
-  if(WheelPos < 170) {
-    WheelPos -= 85;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-  }
-  WheelPos -= 170;
-  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 

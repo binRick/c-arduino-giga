@@ -8,16 +8,11 @@
 #include <Adafruit_LIS3DH.h>
 #include <Adafruit_Sensor.h>
 
-// Used for software SPI
-#define LIS3DH_CLK 13
-#define LIS3DH_MISO 12
-#define LIS3DH_MOSI 11
-// Used for hardware & software SPI
-#define LIS3DH_CS 10
+
 #define PIN 7
 #define NUMPIXELS 7 
 #define BRAKE_ACCEL 5
-#define DEBUG_SERIAL true
+#define DEBUG_SERIAL false
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(7, PIN, NEO_GRB + NEO_KHZ800);
 long lastSerialLog = 0;
@@ -26,6 +21,13 @@ int qtyBrakeEvents = 0;
 
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
+  delay(200);                      // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
+  delay(200);                      // wait for a second
+
+
   if(DEBUG_SERIAL){
 
     Serial.begin(115200);
@@ -66,6 +68,12 @@ void setup() {
   strip.begin();
   strip.setBrightness(50);
   strip.show(); // Initialize all pixels to 'off'
+
+  digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
+  delay(200);                      // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
+  delay(200);                      // wait for a second
+
 }
 
 void loop() {
